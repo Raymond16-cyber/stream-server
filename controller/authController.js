@@ -100,3 +100,18 @@ export const authLogin = asyncHandler(async (req, res) => {
       token,
     });
 });
+
+export const loadUser = asyncHandler(async (req, res) => {
+  try {
+    const userId = req.user.id || req.user._id;
+    const user = await User.findById(userId).select("-password");
+    if (!user) {
+      console.log("User not found");
+      return res.status(404).json({ error: "User not found" });
+    }
+    console.log("User loaded successfully");
+    res.status(200).json({ user });
+  } catch (error) {
+    res.status(500).json({ error: "Unable to load user" });
+  }
+});

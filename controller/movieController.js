@@ -93,7 +93,8 @@ export const saveMovieInfo = asyncHandler(async (req, res) => {
 export const fetchSavedMovies = asyncHandler(async(req,res)=>{
     try {
     console.log("fetching saved movies");
-     const movies = await SavedMovies.find();
+    const userId = req.user.id || req.user._id;
+     const movies = await SavedMovies.find({userId: userId});
     if (!movies || movies === null) {
       res.status(200).json({
         movies: [],
