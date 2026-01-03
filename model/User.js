@@ -16,6 +16,10 @@ const userSchema = mongoose.Schema(
       required: true,
       select: false,
     },
+    securityPin:{
+      type: String,
+      default: "",
+    },
     image: {
       type: String,
       default: "",
@@ -28,6 +32,21 @@ const userSchema = mongoose.Schema(
       type: String,
       enum: ["user", "admin"],
       default: "user",
+    },
+    savedMovies: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "SavedMovies",
+    },
+    profiles:[
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Profile",
+      }
+    ],
+    currentProfile: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Profile",
+      default: null,
     },
     isEmailVerified: {
       type: Boolean,
@@ -45,10 +64,6 @@ const userSchema = mongoose.Schema(
     passwordResetExpires: {
       type: Date,
       default: null,
-    },
-    savedMovies: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "SavedMovies",
     },
   },
   {
