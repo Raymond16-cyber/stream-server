@@ -1,6 +1,7 @@
 import asyncHandler from "express-async-handler";
 import TrendingMovies from "../model/TrendingMovies.js";
 import SavedMovies from "../model/SavedMovies.js";
+import User from "../model/User.js";
 
 // function to save movie Info and serach count
 export const updateMovieCountOrSaveTrendingMovie = asyncHandler(
@@ -57,10 +58,17 @@ export const getTrendingMovies = asyncHandler(async (req, res) => {
 
 // function to save a movie
 export const saveMovieInfo = asyncHandler(async (req, res) => {
-  const { movie, userId } = req.body;  
+  const { movie } = req.body;  
+  const userId = req.user.id || req.user._id;
   try {
-    const result = await SavedMovies.findOne({ movie_id: movie?.id });
-    if (result) {
+    const user = await User.findById(userId);
+    if(!user){
+      res.status(401).json({
+        message: "User not authorized",
+      })
+    }
+    const result = await SavedMovies.find({ movie_id: movie?.id, userId: user.currentProfile.toString() });
+    if (result._id) {
       console.log("Movie has been saved already");
       return res.status(200).json({
         success: true,
@@ -68,13 +76,13 @@ export const saveMovieInfo = asyncHandler(async (req, res) => {
       });
     } else {
       const savedMovie = await SavedMovies.create({
-        userId,
+        userId: user.currentProfile.toString(),
         movie_id: movie.id,
         movie_title: movie.title,
         genres: movie.genres.map((m) => m.name),
         poster_path: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,
       });
-      console.log("Movie saved");
+      console.log("Movie saved", savedMovie);
       return res.status(200).json({
         success: true,
         message: "Saved",
@@ -94,7 +102,13 @@ export const fetchSavedMovies = asyncHandler(async(req,res)=>{
     try {
     console.log("fetching saved movies");
     const userId = req.user.id || req.user._id;
-     const movies = await SavedMovies.find({userId: userId});
+    const user = await User.findById(userId);
+    if(!user){
+      res.status(401).json({
+        message: "User not authorized",
+      })
+    }
+     const movies = await SavedMovies.find({userId: user.currentProfile.toString()});
     if (!movies || movies === null) {
       res.status(200).json({
         movies: [],

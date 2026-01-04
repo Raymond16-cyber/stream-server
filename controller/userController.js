@@ -4,67 +4,80 @@ import jwt from "jsonwebtoken";
 import uploadImageToCloudinary from "../utils/cloudinaryImageUploader.js";
 import Profile from "../model/Profile.js";
 
-export const editName = asyncHandler(async (req, res) => {
-  console.log("editing name");
+export const editUserDetails = asyncHandler(async (req, res) => {
+  console.log("Editing user details...");
 
   const { name } = req.body;
-  try {
-    const userId = req.user.id || req.user._id;
-    const user = await User.findByIdAndUpdate(userId, { name }, { new: true })
-      .populate("profiles")
-      .populate("currentProfile");
-    if (!user) {
-      console.log("unable to find user");
+  const userId = req.user.id || req.user._id;
 
-      return res.status(404).json({ error: "User not found" });
-    }
-    console.log("user's name updated successfully", user);
-    // assign token after name update
-    const token = jwt.sign(
-      {
-        _id: user._id,
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        image: user.image || "",
-        securityPin: user.securityPin || "",
-        currentProfile: user.currentProfile || "",
-        profiles: user.profiles || [],
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: "1d" }
+  let imageUrl;
+
+  if (req.file) {
+    imageUrl = await uploadImageToCloudinary(
+      req.file.buffer,
+      req.file.originalname,
+      req.file.mimetype
     );
-
-    res.status(200).json({ message: "Name updated successfully", user, token });
-  } catch (error) {
-    res.status(500).json({ error: "Unable to update name" });
   }
+
+  const updateData = {
+    ...(name && { name }),
+    ...(imageUrl && { image: imageUrl }),
+  };
+
+  const user = await User.findByIdAndUpdate(userId, updateData, {
+    new: true,
+  })
+    .populate("profiles")
+    .populate("currentProfile");
+
+  if (!user) {
+    return res.status(404).json({ error: "User not found" });
+  }
+
+  let profile = user.currentProfile;
+
+  if (user.currentProfile) {
+    profile = await Profile.findByIdAndUpdate(
+      user.currentProfile._id,
+      updateData,
+      { new: true }
+    );
+  }
+
+  // ✅ regenerate token (as requested)
+  const token = jwt.sign(
+    {
+      _id: user._id,
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      image: user.image || "",
+      securityPin: user.securityPin || "",
+      currentProfile: profile,
+      profiles: user.profiles || [],
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: "1d" }
+  );
+
+  res.status(200).json({
+    message: "User details updated successfully",
+    user,
+    profile,
+    token,
+  });
 });
 
-export const editProfilePicture = asyncHandler(async (req, res) => {
-  console.log("Received file for profile picture update:", req.file);
-  const file = req.file;
-  if (!file) {
-    return res.status(400).json({ error: "No file uploaded" });
-  }
+export const toggleMultiProfile = asyncHandler(async (req, res) => {
   try {
-    const imageUrl = await uploadImageToCloudinary(
-      file.buffer,
-      file.originalname,
-      file.mimetype
-    );
     const userId = req.user.id || req.user._id;
-    const user = await User.findByIdAndUpdate(
-      userId,
-      { image: imageUrl },
-      { new: true }
-    )
-      .populate("profiles")
-      .populate("currentProfile");
+    const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
-    // assign token after name update
+    user.isMultiProfileEnabled = !user.isMultiProfileEnabled;
+    await user.save();
     const token = jwt.sign(
       {
         _id: user._id,
@@ -73,19 +86,21 @@ export const editProfilePicture = asyncHandler(async (req, res) => {
         email: user.email,
         image: user.image || "",
         securityPin: user.securityPin || "",
+        isMultiProfileEnabled: user.isMultiProfileEnabled,
         currentProfile: user.currentProfile || "",
         profiles: user.profiles || [],
       },
       process.env.JWT_SECRET,
       { expiresIn: "1d" }
     );
+    console.log("Multi-profile setting toggled to", user.isMultiProfileEnabled);
 
-    res
-      .status(200)
-      .json({ message: "Profile picture updated successfully", user, token });
+    res.status(200).json({
+      message: "Multi-profile setting updated successfully",
+      isMultiProfileEnabled: user.isMultiProfileEnabled,token,
+    });
   } catch (error) {
-    console.error("Error updating profile picture:", error);
-    res.status(500).json({ error: "Unable to update profile picture" });
+    res.status(500).json({ error: "Unable to toggle multi-profile setting" });
   }
 });
 
@@ -144,7 +159,9 @@ export const deleteProfile = asyncHandler(async (req, res) => {
   try {
     const { profileId } = req.params;
     const userId = req.user.id || req.user._id;
-    const user = await User.findById(userId).populate("profiles").populate("currentProfile");
+    const user = await User.findById(userId)
+      .populate("profiles")
+      .populate("currentProfile");
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
@@ -181,5 +198,48 @@ export const deleteProfile = asyncHandler(async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: "Unable to delete profile" });
+  }
+});
+
+export const switchProfile = asyncHandler(async (req, res) => {
+  try {
+    console.log("Switching profile...", req.query, req.body);
+    const { profileId } = req.body;
+    const userId = req.user.id || req.user._id;
+    const user = await User.findById(userId)
+      .populate("profiles")
+      .populate("currentProfile");
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    const profile = await Profile.findById(profileId);
+    if (!profile) {
+      return res.status(404).json({ error: "Profile not found" });
+    }
+    user.currentProfile = profile._id;
+    await user.save();
+    // create token after switching profile
+    const token = jwt.sign(
+      {
+        _id: user._id,
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        image: user.image || "",
+        securityPin: user.securityPin || "",
+        currentProfile: profile,
+        profiles: user.profiles || [],
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
+    console.log("Switched to profile successfully:", profileId);
+    res.status(200).json({
+      message: "Switched to profile successfully",
+      currentProfile: profile,
+      token,
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Unable to switch profile" });
   }
 });

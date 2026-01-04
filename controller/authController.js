@@ -105,6 +105,7 @@ export const authLogin = asyncHandler(async (req, res) => {
       email: isExisting.email,
       image: isExisting.image || "",
       securityPin: isExisting.securityPin || "",
+      isMultiProfileEnabled: isExisting.isMultiProfileEnabled,
       currentProfile: currentProfile || "",
       profiles: profiles,
     },
@@ -132,13 +133,16 @@ export const loadUser = asyncHandler(async (req, res) => {
     const userId = req.user.id || req.user._id;
     const user = await User.findById(userId)
       .select("-password")
-      .populate("profiles");
+      .populate("profiles")
+      // .populate("currentProfile");
     if (!user) {
       console.log("User not found");
       return res.status(404).json({ error: "User not found" });
     }
     
     const currentProfile = await Profile.findById(user.currentProfile.toString());
+    console.log("User", user.currentProfile);
+    console.log("User loaded successfully",user);
     // create token
     const token = jwt.sign(
       {
@@ -155,7 +159,7 @@ export const loadUser = asyncHandler(async (req, res) => {
       { expiresIn: "1d" }
     );
 
-    res.status(200).json({ token, user });
+    res.status(200).json({ token, user, currentProfile });
   } catch (error) {
     res.status(500).json({ error: "Unable to load user" });
   }
@@ -204,6 +208,6 @@ export const authDestroyAccount = asyncHandler(async (req, res) => {
   try {
     const userId = req.user.id || req.user._id;
     const user = await User.findById(userId);
-    const result = await sendMail(user.email)
+    // const result = await sendMail(user.email)
   }catch{}
 })

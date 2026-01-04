@@ -48,6 +48,10 @@ const userSchema = mongoose.Schema(
       ref: "Profile",
       default: null,
     },
+    isMultiProfileEnabled: {
+      type: Boolean,
+      default: false,
+    },
     isEmailVerified: {
       type: Boolean,
       default: false,
