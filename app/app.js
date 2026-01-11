@@ -6,6 +6,7 @@ import cookieParser from "cookie-parser";
 import authRouter from "../routes/authRoute.js";
 import movieRouter from "../routes/movieRoute.js";
 import userRouter from "../routes/userRoute.js";
+import communityRouter from "../routes/community.route.js";
 
 // Connect to database
 connectDB();
@@ -34,5 +35,6 @@ app.get("/", (req, res) => {
 app.use("/api/auth", authRouter);
 app.use("/api/v1", movieRouter);
 app.use("/api/me", userRouter);
+app.use("/api/community", communityRouter);
 
 export default app;

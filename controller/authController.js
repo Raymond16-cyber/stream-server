@@ -3,6 +3,8 @@ import User from "../model/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import Profile from "../model/Profile.js";
+import { sendForgotPasswordEmail } from "../services/nodemailer.js";
+import crypto from "crypto";
 
 export const authRegister = asyncHandler(async (req, res) => {
   const { name, email, password } = req.body;
@@ -95,7 +97,9 @@ export const authLogin = asyncHandler(async (req, res) => {
     return res.status(400).json({ error: "Invalid email or password" });
   }
   const profiles = await Profile.find({ user: isExisting._id });
-  const currentProfile = await Profile.findById(isExisting.currentProfile.toString());
+  const currentProfile = await Profile.findById(
+    isExisting.currentProfile.toString()
+  );
   // create token
   const token = jwt.sign(
     {
@@ -133,16 +137,18 @@ export const loadUser = asyncHandler(async (req, res) => {
     const userId = req.user.id || req.user._id;
     const user = await User.findById(userId)
       .select("-password")
-      .populate("profiles")
-      // .populate("currentProfile");
+      .populate("profiles");
+    // .populate("currentProfile");
     if (!user) {
       console.log("User not found");
       return res.status(404).json({ error: "User not found" });
     }
-    
-    const currentProfile = await Profile.findById(user.currentProfile.toString());
+
+    const currentProfile = await Profile.findById(
+      user.currentProfile.toString()
+    );
     console.log("User", user.currentProfile);
-    console.log("User loaded successfully",user);
+    console.log("User loaded successfully", user);
     // create token
     const token = jwt.sign(
       {
@@ -165,6 +171,64 @@ export const loadUser = asyncHandler(async (req, res) => {
   }
 });
 
+export const authForgetPassword = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+
+  const user = await User.findOne({ email });
+  if (!user) {
+    return res.status(400).json({ error: "No account found with this email" });
+  }
+
+  // 1️⃣ Generate raw token
+  const resetToken = crypto.randomBytes(32).toString("hex");
+
+  // 2️⃣ Hash token before saving
+  const hashedToken = crypto
+    .createHash("sha256")
+    .update(resetToken)
+    .digest("hex");
+
+  // 3️⃣ Save hashed token + expiry
+  user.passwordResetToken = hashedToken;
+  user.passwordResetExpires = Date.now() + 15 * 60 * 1000; // 15 mins
+  await user.save();
+
+  // 4️⃣ Create reset link
+  const resetLink = `exp://10.59.27.219:8081/--/reset-password/${resetToken}`;
+
+  // 5️⃣ Send email
+  await sendForgotPasswordEmail(user.email, resetLink);
+
+  res.status(200).json({
+    success: true,
+    message: "Password reset link sent to email",
+  });
+});
+
+export const resetPassword = asyncHandler(async (req, res) => {
+  const { token } = req.params;
+  const { password } = req.body;
+
+  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+  const user = await User.findOne({
+    passwordResetToken: hashedToken,
+    passwordResetExpires: { $gt: Date.now() },
+  });
+
+  if (!user) {
+    return res.status(400).json({ error: "Token is invalid or expired" });
+  }
+
+  user.password = password; // make sure hashing middleware runs
+  user.passwordResetToken = undefined;
+  user.passwordResetExpires = undefined;
+
+  await user.save();
+
+  res.status(200).json({ message: "Password reset successful" });
+});
+
 export const createSecurityPin = asyncHandler(async (req, res) => {
   try {
     const userId = req.user.id || req.user._id;
@@ -177,7 +241,9 @@ export const createSecurityPin = asyncHandler(async (req, res) => {
     user.securityPin = securityPin;
     await user.save();
     console.log(user);
-    const currentProfile = await Profile.findById(user.currentProfile.toString());
+    const currentProfile = await Profile.findById(
+      user.currentProfile.toString()
+    );
     // create token
     const token = jwt.sign(
       {
@@ -203,11 +269,21 @@ export const createSecurityPin = asyncHandler(async (req, res) => {
   }
 });
 
-
 export const authDestroyAccount = asyncHandler(async (req, res) => {
   try {
     const userId = req.user.id || req.user._id;
     const user = await User.findById(userId);
     // const result = await sendMail(user.email)
-  }catch{}
-})
+    if (!user) {
+      res.status(404).json({
+        message: "Unable to find user's account",
+      });
+    }
+    await User.findByIdAndDelete(userId);
+    await Profile.deleteMany({ user: userId });
+    console.log("User account and associated profiles deleted successfully");
+    res.status(200).json({ message: "User account deleted successfully" });
+  } catch {
+    res.status(500).json({ error: "Unable to delete user account" });
+  }
+});
