@@ -53,7 +53,7 @@ export const getMyCommunities = async (req, res) => {
     try {
         const communities = await Community.find({ members: { $in: [userId] } });
         console.log(communities);
-        res.status(200).json({ communities });
+        res.status(200).json({ communities: communities });
     } catch (error) {
         res.status(500).json({ error: "Server error" });
     }
