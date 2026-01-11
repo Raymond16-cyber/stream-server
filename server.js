@@ -1,3 +1,4 @@
+console.log("ESM active:", import.meta.url);
 import dotenv from "dotenv";
 dotenv.config({
   path: "./config.env",
@@ -16,7 +17,7 @@ initializeCloudinary()
     console.log("🎉 Cloudinary initialization complete");
   })
   .catch((error) => {
-    console.error("❌ Failed to initialize Cloudinary:", error.message);
+    console.error("❌ Failed to initialize Cloudinary:", error);
     // Don't exit the process, just log the error
   });
 
