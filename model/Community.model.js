@@ -34,6 +34,12 @@ export const CommunitySchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    messages: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Message",
+      },
+    ],
     lastMessage: {
       type: String,
       default: "",

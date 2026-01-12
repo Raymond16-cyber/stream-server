@@ -17,7 +17,7 @@ initializeCloudinary()
     console.log("🎉 Cloudinary initialization complete");
   })
   .catch((error) => {
-    console.error("❌ Failed to initialize Cloudinary:", error);
+    console.error("❌ Failed to initialize Cloudinary:", error.message);
     // Don't exit the process, just log the error
   });
 
