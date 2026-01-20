@@ -7,6 +7,11 @@ const messageSchema = new mongoose.Schema(
             ref: "Community",
             required: true,
         },
+        senderImage: {
+            type: String,
+            required: true,
+            trim: true,
+        },
         senderName: {
             type: String,
             required: true,

@@ -58,43 +58,54 @@ export const getTrendingMovies = asyncHandler(async (req, res) => {
 
 // function to save a movie
 export const saveMovieInfo = asyncHandler(async (req, res) => {
-  const { movie } = req.body;  
+  const { movie } = req.body;
   const userId = req.user.id || req.user._id;
+
   try {
     const user = await User.findById(userId);
-    if(!user){
-      res.status(401).json({
+    if (!user) {
+      return res.status(401).json({
+        success: false,
         message: "User not authorized",
-      })
-    }
-    const result = await SavedMovies.find({ movie_id: movie?.id, userId: user.currentProfile.toString() });
-    if (result._id) {
-      console.log("Movie has been saved already");
-      return res.status(200).json({
-        success: true,
-        message: "Movie has been saved already",
-      });
-    } else {
-      const savedMovie = await SavedMovies.create({
-        userId: user.currentProfile.toString(),
-        movie_id: movie.id,
-        movie_title: movie.title,
-        genres: movie.genres.map((m) => m.name),
-        poster_path: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,
-      });
-      console.log("Movie saved", savedMovie);
-      return res.status(200).json({
-        success: true,
-        message: "Saved",
       });
     }
+
+    // 🔑 CHECK IF MOVIE ALREADY SAVED
+    const existingMovie = await SavedMovies.findOne({
+      movie_id: movie.id,
+      userId: user.currentProfile.toString(),
+    });
+
+    if (existingMovie) {
+      return res.status(200).json({
+        success: true,
+        message: "Movie already saved",
+      });
+    }
+
+    // ✅ SAVE NEW MOVIE
+    const savedMovie = await SavedMovies.create({
+      userId: user.currentProfile.toString(),
+      movie_id: movie.id,
+      movie_title: movie.title,
+      genres: movie.genres.map((g) => g.name),
+      poster_path: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,
+    });
+console.log("saved")
+    return res.status(201).json({
+      success: true,
+      message: "Movie saved",
+      data: savedMovie,
+    });
   } catch (error) {
+    console.error(error);
     return res.status(500).json({
       success: false,
-      error: "Unable to access server",
+      message: "Unable to access server",
     });
-}
+  }
 });
+
 
 // fetch saved movies
 

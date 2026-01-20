@@ -41,6 +41,20 @@ export const CommunitySchema = new mongoose.Schema(
       },
     ],
     lastMessage: {
+      content: {
+        type: String,
+        default: "",
+      },
+      senderName: {
+        type: String,
+        default: "",
+      },
+      senderImage: {
+        type: String,
+        default: "",
+      },
+    },
+    lastMessageSender: {
       type: String,
       default: "",
     },

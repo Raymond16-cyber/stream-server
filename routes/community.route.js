@@ -1,8 +1,10 @@
 import express from "express";
 import {
   createCommunity,
+  fetcLastCommunityMessage,
   getCommunityMessages,
   getMyCommunities,
+  readCommunityMessages,
   sendCommunityMessgaes,
 } from "../controller/community.controller.js";
 import authMiddleware from "../middlewares/authMiddleware.js";
@@ -26,10 +28,20 @@ communityRouter.post(
   authMiddleware,
   sendCommunityMessgaes
 );
+communityRouter.post(
+  "/read-messages",
+  authMiddleware,
+  readCommunityMessages
+);
 communityRouter.get(
   "/get-messages/:communityId",
   authMiddleware,
   getCommunityMessages
+);
+communityRouter.get(
+  "/get-last-message/:communityId",
+  authMiddleware,
+  fetcLastCommunityMessage
 );
 
 export default communityRouter;
