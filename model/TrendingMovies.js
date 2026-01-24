@@ -21,6 +21,10 @@ const TrendingMoviesSchema = mongoose.Schema(
       required: true,
       type: Number,
     },
+    isKids: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

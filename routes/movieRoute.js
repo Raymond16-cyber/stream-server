@@ -1,5 +1,6 @@
 import express from "express";
 import {
+  deleteSavedMovie,
   fetchSavedMovies,
   getTrendingMovies,
   saveMovieInfo,
@@ -15,8 +16,9 @@ movieRouter.post(
   authMiddleware,
   updateMovieCountOrSaveTrendingMovie
 );
-movieRouter.get("/get-trending-movies",authMiddleware, getTrendingMovies);
+movieRouter.get("/get-trending-movies/:isKid",authMiddleware, getTrendingMovies);
 movieRouter.post("/save-movie",authMiddleware, saveMovieInfo);
+movieRouter.delete("/remove-saved-movie/:movieId",authMiddleware, deleteSavedMovie);
 movieRouter.get("/get-saved-movies",authMiddleware, fetchSavedMovies);
 
 export default movieRouter;

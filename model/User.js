@@ -11,6 +11,10 @@ const userSchema = mongoose.Schema(
       required: true,
       unique: true,
     },
+    phone: {
+      type: String,
+      default: "",
+    },
     password: {
       type: String,
       required: true,
@@ -34,6 +38,10 @@ const userSchema = mongoose.Schema(
       default: "user",
     },
     isPremium: {
+      type: Boolean,
+      default: false,
+    },
+    isBLocked: {
       type: Boolean,
       default: false,
     },

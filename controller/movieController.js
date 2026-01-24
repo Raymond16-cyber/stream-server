@@ -6,7 +6,7 @@ import User from "../model/User.js";
 // function to save movie Info and serach count
 export const updateMovieCountOrSaveTrendingMovie = asyncHandler(
   async (req, res) => {
-    const { query, movie } = req.body;
+    const { query, movie,isKid } = req.body;
     try {
       const result = await TrendingMovies.findOne({ movie_id: movie?.id });
       if (result?.movie_id) {
@@ -15,6 +15,7 @@ export const updateMovieCountOrSaveTrendingMovie = asyncHandler(
           {
             count: result.count + 1,
             searchTerm: query.trim(), // optional but useful
+            isKids: isKid || false,
           },
           { new: true }
         );
@@ -28,6 +29,7 @@ export const updateMovieCountOrSaveTrendingMovie = asyncHandler(
           poster_url: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,
           count: 1,
           searchTerm: query.trim(),
+          isKids: isKid || false,
         });
         console.log(`Created metric for ${movie.title}`);
       }
@@ -39,8 +41,9 @@ export const updateMovieCountOrSaveTrendingMovie = asyncHandler(
 
 // function to get trending movies
 export const getTrendingMovies = asyncHandler(async (req, res) => {
+  const { isKid } = req.params;
   try {
-    const movies = await TrendingMovies.find();
+    const movies = await TrendingMovies.find({isKids: isKid === 'true' ? true : false}).sort({ count: -1 }).limit(10);
     if (!movies || movies === null) {
       res.status(200).json({
         movies: [],
@@ -58,9 +61,8 @@ export const getTrendingMovies = asyncHandler(async (req, res) => {
 
 // function to save a movie
 export const saveMovieInfo = asyncHandler(async (req, res) => {
-  const { movie } = req.body;
+  const { movie, isKids } = req.body;
   const userId = req.user.id || req.user._id;
-
   try {
     const user = await User.findById(userId);
     if (!user) {
@@ -90,8 +92,8 @@ export const saveMovieInfo = asyncHandler(async (req, res) => {
       movie_title: movie.title,
       genres: movie.genres.map((g) => g.name),
       poster_path: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,
+      isKids: isKids || false,
     });
-console.log("saved")
     return res.status(201).json({
       success: true,
       message: "Movie saved",
@@ -106,12 +108,46 @@ console.log("saved")
   }
 });
 
+export const deleteSavedMovie = asyncHandler(async (req, res) => {
+  const { movieId } = req.params;
+  const userId = req.user.id || req.user._id;
+  try {
+    const user = await User.findById(userId);
+    if (!user) {  
+      return res.status(401).json({
+        success: false,
+        message: "User not authorized",
+      });
+    }
+    const deletedMovie = await SavedMovies.findOneAndDelete({
+      movie_id: movieId,
+      userId: user.currentProfile.toString(),
+    });
+
+    if (!deletedMovie) {
+      return res.status(404).json({
+        success: false,
+        message: "Movie does not exist in saved list",
+      });
+    }
+    return res.status(200).json({
+      success: true,
+      message: "Movie removed from saved list",
+    });
+  }
+  catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      success: false,
+      message: "Unable to access server",
+    });
+  }
+});
+
 
 // fetch saved movies
-
 export const fetchSavedMovies = asyncHandler(async(req,res)=>{
     try {
-    console.log("fetching saved movies");
     const userId = req.user.id || req.user._id;
     const user = await User.findById(userId);
     if(!user){
@@ -135,3 +171,4 @@ export const fetchSavedMovies = asyncHandler(async(req,res)=>{
     
   }
 })
+

@@ -23,7 +23,10 @@ export const authRegister = asyncHandler(async (req, res) => {
   const newUser = await User.create({
     name,
     email,
+    phone: "",
     password: hashedPassword,
+    isPremium: false,
+    isBlocked: false,
   });
   // create user profiles
   const mainProfile = await Profile.create({
@@ -42,6 +45,7 @@ export const authRegister = asyncHandler(async (req, res) => {
     isKid: true,
     isMain: false,
     user: newUser._id,
+    
   });
   newUser.currentProfile = mainProfile._id;
   // associate profile with user
@@ -80,8 +84,6 @@ export const authLogin = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
   const isExisting = await User.findOne({ email }).select("+password");
-
-  console.log("Login ", isExisting);
   // user doesn't exist
   if (!isExisting) {
     return res
@@ -107,11 +109,15 @@ export const authLogin = asyncHandler(async (req, res) => {
       id: isExisting._id,
       name: isExisting.name,
       email: isExisting.email,
+      phone: isExisting.phone || "",
+      isBlocked: isExisting.isBlocked || false,
+      isPremium: isExisting.isPremium || false,
       image: isExisting.image || "",
       securityPin: isExisting.securityPin || "",
       isMultiProfileEnabled: isExisting.isMultiProfileEnabled,
       currentProfile: currentProfile || "",
       profiles: profiles,
+      startedAt: isExisting.createdAt,
     },
     process.env.JWT_SECRET,
     { expiresIn: "1d" }
@@ -156,6 +162,9 @@ export const loadUser = asyncHandler(async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
+        phone: user.phone || "",
+      isBlocked: user.isBlocked || false,
+      isPremium: user.isPremium || false,
         image: user.image || "",
         securityPin: user.securityPin || "",
         currentProfile: currentProfile || "",
@@ -251,6 +260,9 @@ export const createSecurityPin = asyncHandler(async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
+        phone: user.phone || "",
+      isBlocked: user.isBlocked || false,
+      isPremium: user.isPremium || false,
         image: user.image || "",
         securityPin: user.securityPin || "",
         currentProfile: currentProfile || "",

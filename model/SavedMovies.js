@@ -20,6 +20,10 @@ const SavedMoviesSchema = mongoose.Schema(
       required: true,
       type: String,
     },
+    isKids: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
