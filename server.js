@@ -7,6 +7,7 @@ import http from "http";
 import app from "./app/app.js";
 import { initializeCloudinary } from "./services/cloudinary.js";
 
+
 const PORT = process.env.PORT || 4000;
 
 const server = http.createServer(app);

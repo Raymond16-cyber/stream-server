@@ -81,6 +81,11 @@ const userSchema = mongoose.Schema(
       type: Date,
       default: null,
     },
+    // customer care fields
+    careLimit:{
+      type: Number,
+      default: 5,
+    }
   },
   {
     timestamps: true,
